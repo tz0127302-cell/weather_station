@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(iconv -f UTF-8 -t GBK HARDWARE/src/wifi.c)",
+      "Bash(mv HARDWARE/src/wifi_gbk.c HARDWARE/src/wifi.c)",
+      "Bash(iconv -f UTF-8 -t GBK USER/src/main.c)",
+      "Bash(mv USER/src/main_gbk.c USER/src/main.c)",
+      "Bash(iconv -f UTF-8 -t GBK HARDWARE/inc/weather.h)",
+      "Bash(mv HARDWARE/inc/weather_gbk.h HARDWARE/inc/weather.h)",
+      "Bash(iconv -f UTF-8 -t GBK HARDWARE/src/weather.c)",
+      "Bash(mv HARDWARE/src/weather_gbk.c HARDWARE/src/weather.c)",
+      "Bash(iconv -f UTF-8 -t GBK HARDWARE/inc/weather_voice.h)",
+      "Bash(iconv -f UTF-8 -t GBK//IGNORE HARDWARE/inc/weather.h)",
+      "Bash(iconv -f UTF-8 -t GBK//IGNORE HARDWARE/src/weather.c)",
+      "Bash(iconv -f UTF-8 -t GBK//IGNORE HARDWARE/inc/weather_voice.h)",
+      "Bash(mv HARDWARE/inc/weather_voice_gbk.h HARDWARE/inc/weather_voice.h)",
+      "Bash(iconv -f UTF-8 -t GBK//IGNORE HARDWARE/src/weather_voice.c)",
+      "Bash(iconv -f UTF-8 -t GBK//IGNORE USER/src/main.c)",
+      "Bash(mv HARDWARE/src/weather_voice_gbk.c HARDWARE/src/weather_voice.c)",
+      "Bash(curl -s --max-time 5 \"http://api.yytianqi.com/observe?city=CH281901&key=9akdmpg9548d1mqe\")",
+      "Bash(iconv -f UTF-8 -t GBK HARDWARE/src/weather_voice.c)",
+      "Bash(iconv -f UTF-8 -t GBK//IGNORE HARDWARE/src/wifi.c)"
+    ]
+  }
+}
