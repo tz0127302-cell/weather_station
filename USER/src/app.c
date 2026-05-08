@@ -1,34 +1,39 @@
 #include "app.h"
 
-
+/*任务句柄*/
 TaskHandle_t Task1Handle;
 TaskHandle_t Task2Handle;
 TaskHandle_t Task3Handle;
+/*起始任务句柄*/
 extern TaskHandle_t StartTaskHandle;
+/*队列句柄*/
 QueueHandle_t queue1;
+/*定时器句柄*/
 TimerHandle_t Timer1Handle;
+/*信号量句柄*/
+SemaphoreHandle_t sem1;//二值信号量
 
 void StartTask(void *ptr)
 {
     printf("StartTask is running\r\n");
-   xTaskCreate(Task1,    // 任务函数指针
-                "Task1",    // 任务名称
-                START_TASK_STACK_SIZE,    // 任务栈大小
-                "hello task1",  // 任务参数
-                3,  // 任务优先级
-                &Task1Handle );  // 任务句柄  
-    xTaskCreate(Task2,    // 任务函数指针
-                "Task2",    // 任务名称 
-                START_TASK_STACK_SIZE,    // 任务栈大小
-                "hello task2",  // 任务参数
-                2,  // 任务优先级
-                &Task2Handle );  // 任务句柄  
-    xTaskCreate(Task3,    // 任务函数指针
-                "Task3",    // 任务名称
-                START_TASK_STACK_SIZE,    // 任务栈大小
-                "hello task3",  // 任务参数
-                1,  // 任务优先级
-                &Task3Handle );  // 任务句柄  
+   xTaskCreate(Task1,                        // 任务函数指针
+                "Task1",                     // 任务名称
+                START_TASK_STACK_SIZE,       // 任务栈大小
+                "hello task1",               // 任务参数
+                3,                           // 任务优先级
+                &Task1Handle );              // 任务句柄  
+    xTaskCreate(Task2,                       // 任务函数指针
+                "Task2",                     // 任务名称 
+                START_TASK_STACK_SIZE,       // 任务栈大小
+                "hello task2",               // 任务参数
+                2,                           // 任务优先级
+                &Task2Handle );              // 任务句柄  
+    xTaskCreate(Task3,                       // 任务函数指针
+                "Task3",                     // 任务名称
+                START_TASK_STACK_SIZE,       // 任务栈大小
+                "hello task3",               // 任务参数
+                1,                           // 任务优先级
+                &Task3Handle );              // 任务句柄  
     
 
     //创建队列
@@ -36,11 +41,16 @@ void StartTask(void *ptr)
                          sizeof(u8));  // 队列中每个元素的大小
     //创建定时器1
     Timer1Handle = xTimerCreate("Timer1", 1000 / portTICK_PERIOD_MS, pdTRUE, NULL, Timer1Callback);
-    if (Timer1Handle != NULL)//启动定时器1
+    if (Timer1Handle != NULL)
     {
-        xTimerStart(Timer1Handle, 0);//
+        xTimerStart(Timer1Handle, 0);//启动定时器1
     }
-
+    //创建二值信号量
+    sem1 = xSemaphoreCreateBinary();
+    if (sem1 != NULL)
+    {
+        printf("xSemaphoreCreateBinary success\r\n");
+    }
     //删除起始任务
     vTaskDelete(StartTaskHandle);
 }
@@ -49,22 +59,13 @@ void Task1(void *ptr)
 {
     printf("Task1 is running\r\n");
     while(1)
-    {     
-         //等待队列中的数据，参数：队列句柄、接收数据的缓冲区、等待时间
-         u8 key;
-         if(xQueueReceive(queue1, &key, portMAX_DELAY) == pdPASS)  //从队列接收数据，参数：队列句柄、接收数据的缓冲区、等待时间
-         {
-             printf("Task1 received key from queue1: %d\r\n", key);
-             LED1_TOGGLE;
-             LED2_TOGGLE;
-         }
-         else
-         {
-             printf("Task1 receive key from queue1 failed\r\n");
-         }
-        vTaskDelay(20);  // 延时20个系统节拍
-        // //挂起任务1
-        // vTaskSuspend(Task1Handle);
+    {     //等待信号量
+         if(xSemaphoreTake(sem1,portMAX_DELAY) == pdTRUE)//1->0成功
+        {
+            printf("run Task1\r\n");
+            LED1_TOGGLE;
+            LED2_TOGGLE;
+        }
     }
 }
 
@@ -76,14 +77,9 @@ void Task2(void *ptr)
         key = Key_Scan();
         if(key == 1)
         {
-            if(xQueueSend( queue1,&key,0) == pdPASS)  //发送数据到队列，参数：队列句柄、数据指针、等待时间
-            {
-                printf("Task1 send key to queue1\r\n");
-            }
-            else
-            {
-                printf("Task1 send key to queue1 failed\r\n");
-            }
+           //释放信号量
+            xSemaphoreGive(sem1);
+            printf("Task2 release sem to Task1\r\n");
             
         }
 

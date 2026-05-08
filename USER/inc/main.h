@@ -35,6 +35,7 @@
 #include "task.h"            /* FreeRTOS任务管理头文件 */
 #include "queue.h"           /* FreeRTOS队列管理头文件 */  
 #include "timers.h"          /* FreeRTOS定时器管理头文件 */
+#include "semphr.h"          /* FreeRTOS信号量管理头文件 */
 #include "app.h"             /* 应用模块头文件 */
 
 #endif /* _MAIN_H */
