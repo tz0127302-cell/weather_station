@@ -1,122 +1,56 @@
 /**
  * @file main.c
- * @brief
- * @details
+ * @brief 系统主函数入口
+ * @details 硬件初始化 -> 创建启动任务 -> 启动FreeRTOS调度器
+ *          所有业务逻辑由 FreeRTOS 任务管理，main() 只负责初始化
  * @author He
  * @date 2026-04-25
  */
 
 #include "main.h"
-#include "pic.h"
 
-TaskHandle_t StartTaskHandle;
+TaskHandle_t StartTaskHandle;  /* 启动任务句柄，供 app.c 使用 */
 
-
-/* city codes for cycling */
-static const char *city_codes[] = {
-    "CH010100",  /* BeiJing */
-    "CH020100",  /* ShangHai */
-    "CH280101",  /* GuangZhou */
-    "CH281601",  /* ShenZhen */
-};
-#define CITY_COUNT  (sizeof(city_codes) / sizeof(city_codes[0]))
-
-
+/**
+ * @brief 系统主函数
+ *        1. 初始化所有硬件外设
+ *        2. 创建 StartTask 启动任务
+ *        3. 启动 FreeRTOS 调度器（永不返回）
+ * @param 无
+ * @retval int 正常情况下不返回
+ */
 int main()
 {
-    //
+    /*==================== 第1步：硬件初始化 ====================*/
+
+    /* 设置中断优先级分组为2位抢占 + 2位响应 */
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
-    Led_Init();//LED
-    USART1_Init(115200);  // 115200
-    LCD_Init();//LCD
-    DHT11_Init();//DHT11
-    W25Qxx_Config();//W25QXX
-    SU_03T_Config();//SU03T
-    MY1680_Config();//MY1680
-    Wifi_NtpInit();//WIFINTP
-    Rtc_Init();//RTC
-    Key_EXTI_Init();//KEY EXTI
 
-    /* vars */
-    u8 city_idx = 0;
-    u8 busy = 0;
-    u8 loop_cnt = 0;
-    char buf[1024];
-    WeatherData w;
+    Led_Init();            /* 初始化 LED: LED1(PC5), LED2(PC4) */
+    USART1_Init(115200);   /* 初始化串口1: 控制台输出, 波特率115200 */
+    LCD_Init();            /* 初始化 LCD: ST7789, 320x240 */
+    DHT11_Init();          /* 初始化 DHT11: 温湿度传感器, PC1 */
+    W25Qxx_Config();       /* 初始化 W25Q64: SPI Flash 存储 */
+    SU_03T_Config();       /* 初始化 SU03T: 语音识别模块, UART4 */
+    MY1680_Config();       /* 初始化 MY1680: 语音合成模块, UART5 */
+    Wifi_NtpInit();        /* 初始化 WiFi + NTP: ESP-12F, 连接AP并同步时间 */
+    Rtc_Init();            /* 初始化 RTC: 内部实时时钟, 1Hz */
+    Key_EXTI_Init();       /* 初始化按键EXTI: PA0, 上升沿触发中断 */
 
-    // if(KEY1)
-    // {
-    //   Font_Update();
-    // }
+    /*==================== 第2步：创建启动任务 ====================*/
 
-    xTaskCreate(StartTask,    // 任务函数指针
-                "StartTask",    // 任务名称
-                START_TASK_STACK_SIZE,    // 任务栈大小
-                "hello start",  // 任务参数
-                START_TASK_PRIORITY,  // 任务优先级
-                &StartTaskHandle );  // 任务句柄    
-    vTaskStartScheduler(); // 启动调度器
-    /* fetch default city weather */
-    if (Wifi_GetWeather(city_codes[city_idx], buf, sizeof(buf)) == 0)
-    {
-        Weather_Parse(buf, &w);
-        printf("city: %s, weather: %s, temp: %d C, hum: %d%%\r\n",
-               w.cityName, w.tq, w.qw, w.sd);
+    xTaskCreate(StartTask,            /* 启动任务函数 */
+                "StartTask",           /* 任务名(调试用) */
+                START_TASK_STACK_SIZE, /* 栈大小(256 words = 1024 bytes) */
+                "hello start",         /* 任务参数 */
+                START_TASK_PRIORITY,   /* 优先级4(最高) */
+                &StartTaskHandle);     /* 任务句柄 */
 
-        /* display on LCD */
-        Weather_Display(&w);
+    /*==================== 第3步：启动调度器 ====================*/
 
-        /* voice broadcast */
-        Weather_Voice_Play(w.voice_file, w.qw, w.sd);
-    }
-    else
-    {
-        printf("weather fetch failed\r\n");
-    }
+    vTaskStartScheduler();  /* 启动 FreeRTOS 调度器 */
 
-    /* main loop */
-    while(1)
-    {
-        printf("进入主循环\r\n");
-        /* periodic tasks (every ~1s) */
-        loop_cnt++;
-        if (loop_cnt >= 10)
-        {
-            loop_cnt = 0;
-            SU_03T_Control();
-            RTC_Analysis();
-        }
-
-        /* button switch city (interrupt trigger) */
-        if (!busy && key_int_flag)
-        {
-            key_int_flag = 0;
-            delay_ms(20);  /* debounce */
-            if (KEY1 != Bit_SET) continue;  /* false trigger */
-
-            busy = 1;
-            city_idx = (city_idx + 1) % CITY_COUNT;
-            printf("switch to city %d\r\n", city_idx);
-
-            if (Wifi_GetWeather(city_codes[city_idx], buf, sizeof(buf)) == 0)
-            {
-                Weather_Parse(buf, &w);
-                printf("city: %s, weather: %s, temp: %d C, hum: %d%%\r\n",
-                       w.cityName, w.tq, w.qw, w.sd);
-
-                /* refresh LCD */
-                Weather_Display(&w);
-
-                /* voice broadcast */
-                Weather_Voice_Play(w.voice_file, w.qw, w.sd);
-            }
-            else
-            {
-                printf("weather fetch failed for city %d\r\n", city_idx);
-            }
-            busy = 0;
-        }
-        Lcd_DisplayPic(160,10,gImage_00_0);
-        delay_ms(100);
-    }
+    /* 正常情况下 vTaskStartScheduler() 永不返回 */
+    /* 如果执行到这里说明调度器启动失败(通常是堆内存不足) */
+    while(1);  /* 死循环，防止程序跑飞 */
 }

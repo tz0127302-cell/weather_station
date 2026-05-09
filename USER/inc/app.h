@@ -6,13 +6,13 @@
 
 
 #define START_TASK_STACK_SIZE 256
-#define START_TASK_PRIORITY  4/* 最高优先级 */
+#define START_TASK_PRIORITY  4/*  */
 
 
 void StartTask(void *ptr);
-void Task1(void *ptr);
-void Task2(void *ptr);
-void Task3(void *ptr);
+void WeatherTask(void *ptr);
+void KeyTask(void *ptr);
+void DisplayTask(void *ptr);
 void Timer1Callback(TimerHandle_t xTimer);
 
 
