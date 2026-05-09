@@ -81,7 +81,7 @@ void Timer1Callback(TimerHandle_t xTimer)
 /*============================================================*
  * 函数名: WeatherTask
  * 功能: 天气获取任务, 优先级2
- *       1. 首次运行获取默认城市(北京)天气
+ *       1. 首次运行获取默认城市(东莞)天气
  *       2. 进入命令循环, 等待队列命令
  *       3. 收到 CMD_SWITCH_CITY 时切换并重新获取天气
  * 注意: buf[1024] 声明为 static,
@@ -92,7 +92,7 @@ void WeatherTask(void *ptr)
     uint8_t cmd;           /* 从队列接收的命令码 */
     static char buf[1024]; /* 天气API响应缓冲区(静态区, 不在栈上) */
 
-    /* ---- 首次启动: 获取第0个城市(北京)的天气 ---- */
+    /* ---- 首次启动: 获取第0个城市(东莞)的天气 ---- */
     current_city_idx = 0;
     if (Wifi_GetWeather(city_codes[0], buf, sizeof(buf)) == 0)
     {
@@ -175,11 +175,27 @@ void DisplayTask(void *ptr)
 {
     while (1)
     {
+        char line[32];
         /* 串口打印室内温湿度 */
         printf("Indoor: %dC, %d%%\r\n", indoor_data.temp, indoor_data.humi);
-
+        /*屏幕显示室内温度*/
+        Lcd_DisplayStr(160, 80, BLACK, WHITE, 24, (u8 *)"室温:");
+        sprintf(line, "%d℃", indoor_data.temp);
+        Lcd_DisplayStr(240, 80, BLACK, WHITE, 24, (u8 *)line);
+        /*屏幕显示室内湿度*/
+        Lcd_DisplayStr(160, 120, BLACK, WHITE, 24, (u8 *)"室湿:");
+        sprintf(line, "%d%%", indoor_data.humi);
+        Lcd_DisplayStr(240, 120, BLACK, WHITE, 24, (u8 *)line);
+        
         /* 串口打印RTC日期时间 */
         RTC_Analysis();
+        /* 屏幕显示RTC日期时间 */
+        sprintf(line, "%04d-%02d-%02d", rtc_time.year, rtc_time.month, rtc_time.day);
+        Lcd_DisplayStr(10, 10, BLACK, WHITE, 24, (u8 *)line);
+
+        sprintf(line, "%02d:%02d:%02d", rtc_time.hour, rtc_time.minute, rtc_time.second);
+        Lcd_DisplayStr(80, 40, BLACK, WHITE, 32, (u8 *)line);
+
 
         /* 延时2秒 */
         vTaskDelay(2000 / portTICK_PERIOD_MS);

@@ -1,14 +1,15 @@
 /**
  * @file key.c
  * @brief 按键检测函数源文件
- * @details 包含按键GPIO初始化、扫描函数、边沿检测和EXTI中断
+ * @details 包含按键GPIO初始化、按键扫描函数以及按键EXTI中断初始化与中断服务函数
+ *          PA0引脚作为按键输入，上升沿触发中断
  * @author He
  * @date 2026-04-25
  */
 
 #include "key.h"
 
-/* 按键中断标志位 */
+/* 按键中断标志位，volatile防止编译器优化，确保每次从内存读取 */
 volatile uint8_t key_int_flag = 0;
 
 
@@ -16,11 +17,14 @@ volatile uint8_t key_int_flag = 0;
  * @brief 按键引脚初始化
  * @param void
  * @retval void
+ * @details 将PA0配置为浮空输入模式，用于检测外部按键电平变化
+ *          浮空输入模式下，引脚电平由外部电路决定，内部无上下拉
  */
 void Key_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
 
+    /* 配置PA0为浮空输入模式 */
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -28,18 +32,26 @@ void Key_Init(void)
 }
 
 /**
- * @brief 按键扫描 (阻塞)
+ * @brief 按键扫描函数（阻塞式）
  * @param void
- * @retval uint8_t 1=按下并释放
+ * @retval uint8_t 1=检测到按键按下并释放，0=无按键动作
+ * @details 检测PA0引脚是否为高电平，若是则延时30ms去抖，
+ *          然后等待按键释放（电平变低），返回1表示一次完整的按键操作
+ * @note 此函数为阻塞式，会等待按键释放后才返回
  */
 uint8_t Key_Scan(void)
 {
+    /* 检测按键是否按下（PA0是否为高电平） */
     if(KEY1 == Bit_SET)
     {
+        /* 延时30ms进行软件去抖，消除按键机械抖动造成的影响 */
         delay_ms(30);
+        /* 等待按键释放，阻塞在此直到PA0变为低电平 */
         while(KEY1 == Bit_SET);
+        /* 返回1，表示检测到一次完整的按键按下并释放操作 */
         return 1;
     }
+    /* 无按键按下，返回0 */
     return 0;
 }
 
@@ -48,36 +60,48 @@ uint8_t Key_Scan(void)
  * @brief 按键EXTI中断初始化 (PA0 - EXTI0)
  * @param void
  * @retval void
+ * @details 配置PA0的外部中断功能，上升沿触发中断，
+ *          设置中断优先级为抢占优先级1、子优先级1
  */
 void Key_EXTI_Init(void)
 {
+    /* 使能AFIO（复用功能I/O）时钟，外部中断需要AFIO支持 */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 
+    /* 将PA0引脚映射到EXTI0线路，即PA0的电平变化可触发EXTI0中断 */
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource0);
 
+    /* 配置EXTI0中断参数 */
     EXTI_InitTypeDef EXTI_InitStruct;
-    EXTI_InitStruct.EXTI_Line = EXTI_Line0;
-    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
-    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;
-    EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+    EXTI_InitStruct.EXTI_Line = EXTI_Line0;              /* 选择EXTI线路0 */
+    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;     /* 配置为中断模式（非事件模式） */
+    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;  /* 上升沿触发：按键按下时电平由低变高 */
+    EXTI_InitStruct.EXTI_LineCmd = ENABLE;               /* 使能该EXTI线路 */
     EXTI_Init(&EXTI_InitStruct);
 
+    /* 配置NVIC嵌套向量中断控制器 */
     NVIC_InitTypeDef NVIC_InitStruct;
-    NVIC_InitStruct.NVIC_IRQChannel = EXTI0_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 1;
-    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_InitStruct.NVIC_IRQChannel = EXTI0_IRQn;            /* EXTI0中断通道 */
+    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 1;   /* 抢占优先级为1 */
+    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;          /* 子优先级为1 */
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;             /* 使能该中断通道 */
     NVIC_Init(&NVIC_InitStruct);
 }
 
 /**
- * @brief EXTI0中断服务函数 (PA0按键)
+ * @brief EXTI0中断服务函数 (PA0按键触发)
+ * @details 当PA0检测到上升沿（按键按下）时进入此中断，
+ *          设置按键中断标志位key_int_flag为1，供主循环查询，
+ *          并清除中断挂起位，防止重复触发
  */
 void EXTI0_IRQHandler(void)
 {
+    /* 检查EXTI0线路是否确实产生了中断 */
     if (EXTI_GetITStatus(EXTI_Line0) == SET)
     {
+        /* 设置按键中断标志位为1，通知主循环有按键事件发生 */
         key_int_flag = 1;
+        /* 清除EXTI0线路的中断挂起标志，避免重复进入中断 */
         EXTI_ClearITPendingBit(EXTI_Line0);
     }
 }

@@ -1,16 +1,23 @@
 /**
  * @file weather.c
  * @brief 天气数据解析模块源文件
- * @details 解析yytianqi.com的JSON天气数据含unicode转义解码
+ * @details 解析yytianqi.com返回的JSON天气数据，进行Unicode到GBK的转换，
+ *          以及将解析后的天气数据显示在LCD屏幕上
  * @author He
  * @date 2026-05-06
  */
 
 #include "weather.h"
 
-/* Unicode到GBK映射表 按Unicode排序用于二分查找 */
+/* Unicode到GBK映射表结构体定义：存储Unicode码点及其对应的GBK编码高低字节 */
 typedef struct { u16 uni; u8 hi; u8 lo; } UniToGbk;
 
+/**
+ * Unicode到GBK编码映射表（静态常量）
+ * 该表包含了天气相关常用汉字的Unicode码点到GBK编码的映射
+ * 用于将从天气API获取的JSON中的\uXXXX转义序列转换为可显示的GBK汉字
+ * 表中按Unicode码点升序排列，便于二分查找
+ */
 static const UniToGbk uni2gbk[] = {
     {0x4e0a, 0xc9, 0xcf},  /* 上 */
     {0x4e1c, 0xb6, 0xab},  /* 东 */
@@ -22,7 +29,7 @@ static const UniToGbk uni2gbk[] = {
     {0x4f4e, 0xb5, 0xcd},  /* 低 */
     {0x4f5b, 0xb7, 0xf0},  /* 佛 */
     {0x5170, 0xc0, 0xbc},  /* 兰 */
-    {0x51b0, 0xb1, 0xf9},  /* 冰 */
+    {0x51b0, 0xb1, 0xf9},  /* 冻 */
     {0x51b7, 0xc0, 0xe4},  /* 冷 */
     {0x51c9, 0xc1, 0xb9},  /* 凉 */
     {0x5206, 0xb7, 0xd6},  /* 分 */
@@ -38,7 +45,7 @@ static const UniToGbk uni2gbk[] = {
     {0x5408, 0xba, 0xcf},  /* 合 */
     {0x5411, 0xcf, 0xf2},  /* 向 */
     {0x5730, 0xb5, 0xd8},  /* 地 */
-    {0x5733, 0xdb, 0xda},  /* 圳 */
+    {0x5733, 0xdb, 0xda},  /* 深 */
     {0x591a, 0xb6, 0xe0},  /* 多 */
     {0x5927, 0xb4, 0xf3},  /* 大 */
     {0x5929, 0xcc, 0xec},  /* 天 */
@@ -149,12 +156,19 @@ static const UniToGbk uni2gbk[] = {
     {0x9ec4, 0xbb, 0xc6},  /* 黄 */
 };
 
+/* 映射表元素个数，用于二分查找边界控制 */
 #define UNI2GBK_SIZE  (sizeof(uni2gbk) / sizeof(uni2gbk[0]))
 
 
 /**
- * @brief  将\uXXXX转义解码为GBK就地转换
- * @param  str: 输入输出字符串
+ * @brief  将JSON中的\uXXXX转义序列转换为GBK编码的汉字
+ * @param  str: 输入输出字符串，原地转换
+ * @note   函数直接在原字符串上操作，使用双指针技术：
+ *         src为读指针，dst为写指针
+ *         遇到\uXXXX格式时，解析出Unicode码点后通过二分查找映射表找到对应GBK编码
+ *         将GBK编码(2字节)写入dst位置，src跳过6个字符(\uXXXX)
+ *         非转义字符直接拷贝
+ *         转换后的字符串长度可能缩短(4字节\uXXXX变成2字节GBK)，不会溢出
  */
 static void DecodeUnicode(char *str)
 {
@@ -178,7 +192,7 @@ static void DecodeUnicode(char *str)
 
             if (i == 4)
             {
-                /* 二分查找映射表 */
+                /* 在映射表中二分查找对应的GBK编码 */
                 s16 lo = 0, hi = UNI2GBK_SIZE - 1, mid;
                 u16 found = 0xFFFF;
                 while (lo <= hi)
@@ -191,101 +205,115 @@ static void DecodeUnicode(char *str)
 
                 if (found != 0xFFFF)
                 {
+                    /* 找到映射：写入2字节GBK编码到目标位置 */
                     *dst++ = (u8)(found >> 8);
                     *dst++ = (u8)(found & 0xFF);
-                    src += 6;
+                    src += 6;    /* 跳过\uXXXX共6个字符 */
                     continue;
                 }
             }
         }
+        /* 非转义字符或未找到映射的Unicode，直接拷贝 */
         *dst++ = *src++;
     }
-    *dst = '\0';
+    *dst = '\0';  /* 字符串结束符 */
 }
 
 
 /**
  * @brief  解析yytianqi.com返回的JSON天气数据
- * @param  json: 原始JSON字符串来自HTTP响应
- * @param  w: WeatherData结构体指针
+ * @param  json: 原始JSON字符串（包含HTTP响应头）
+ * @param  w: WeatherData结构体指针，用于存储解析结果
+ * @note   解析流程：
+ *         1. 自动定位到JSON体（跳过HTTP响应头，找到第一个'{'）
+ *         2. 将\uXXXX转义序列解码为GBK汉字
+ *         3. 依次解析以下字段：
+ *            - cityName: 城市名称（字符串）
+ *            - tq: 天气状况描述（字符串，如"晴"、"多云"）
+ *            - numtq: 天气数值编号，用于语音播报文件选择（整数）
+ *            - qw: 气温（整数）
+ *            - sd: 湿度百分比（整数）
+ *            - fl: 风力等级描述（字符串）
+ *            - fx: 风向描述（字符串）
+ *         使用strstr定位字段，然后手动逐字符拷贝到结构体中
  */
 void Weather_Parse(char *json, WeatherData *w)
 {
     char *p, *val;
     u8 i;
 
-    /* 跳过HTTP头找到JSON主体 */
+    /* 找到JSON体的起始位置，跳过HTTP响应头 */
     char *json_body = strchr(json, '{');
     if (json_body)
     {
         memmove(json, json_body, strlen(json_body) + 1);
     }
 
-    /* 解码unicode转义序列 */
+    /* 将JSON中所有的\uXXXX转义序列转换为GBK编码 */
     DecodeUnicode(json);
 
-    /* cityName */
+    /* 解析城市名称 cityName */
     p = strstr(json, "\"cityName\":\"");
     if (p)
     {
-        val = p + 12;
+        val = p + 12;        /* 跳过键名"cityName":" 共12个字符 */
         for (i = 0; *val && *val != '"' && i < sizeof(w->cityName) - 1; i++)
             w->cityName[i] = *val++;
         w->cityName[i] = '\0';
     }
 
-    /* tq 天气现象 */
+    /* 解析天气状况 tq（如：晴、多云、阵雨等） */
     p = strstr(json, "\"tq\":\"");
     if (p)
     {
-        val = p + 6;
+        val = p + 6;         /* 跳过键名"tq":" 共6个字符 */
         for (i = 0; *val && *val != '"' && i < sizeof(w->tq) - 1; i++)
             w->tq[i] = *val++;
         w->tq[i] = '\0';
     }
 
-    /* numtq 转 voice_file */
+    /* 解析天气编号 numtq -> 转换为语音文件编号 voice_file */
     p = strstr(json, "\"numtq\":\"");
     w->voice_file = 0;
     if (p)
     {
-        val = p + 9;
+        val = p + 9;         /* 跳过键名"numtq":" 共9个字符 */
         while (*val >= '0' && *val <= '9') { w->voice_file = w->voice_file * 10 + (*val - '0'); val++; }
     }
 
-    /* qw 气温 */
+    /* 解析气温 qw（摄氏度） */
     p = strstr(json, "\"qw\":\"");
     w->qw = 0;
     if (p)
     {
-        val = p + 6;
+        val = p + 6;         /* 跳过键名"qw":" 共6个字符 */
         while (*val >= '0' && *val <= '9') { w->qw = w->qw * 10 + (*val - '0'); val++; }
     }
 
-    /* sd 湿度 */
+    /* 解析湿度 sd（百分比） */
     p = strstr(json, "\"sd\":\"");
     w->sd = 0;
     if (p)
     {
-        val = p + 6;
+        val = p + 6;         /* 跳过键名"sd":" 共6个字符 */
         while (*val >= '0' && *val <= '9') { w->sd = w->sd * 10 + (*val - '0'); val++; }
     }
 
-    /* fl 风力 */
+    /* 解析风力等级 fl */
     p = strstr(json, "\"fl\":\"");
     if (p)
     {
-        val = p + 6;
+        val = p + 6;         /* 跳过键名"fl":" 共6个字符 */
         for (i = 0; *val && *val != '"' && i < sizeof(w->fl) - 1; i++)
             w->fl[i] = *val++;
         w->fl[i] = '\0';
     }
 
-    /* fx 风向 */
+    /* 解析风向 fx */
     p = strstr(json, "\"fx\":\"");
     if (p)
     {
-        val = p + 6;
+        val = p + 6;         /* 跳过键名"fx":" 共6个字符 */
         for (i = 0; *val && *val != '"' && i < sizeof(w->fx) - 1; i++)
             w->fx[i] = *val++;
         w->fx[i] = '\0';
@@ -293,36 +321,44 @@ void Weather_Parse(char *json, WeatherData *w)
 }
 
 /**
- * @brief  LCD显示天气信息
- * @param  w: 天气数据指针
+ * @brief  在LCD上显示天气信息
+ * @param  w: 天气数据指针，包含已解析的各项天气信息
+ * @note   显示布局（屏幕分辨率320x240）：
+ *         第一行：城市名称（红色，32号字体），Y=74
+ *         第二行：温度（黑色，24号字体），Y=119
+ *         第三行：天气状况（蓝色，24号字体），Y=154
+ *         第四行：湿度（黑色，16号字体），Y=194
+ *         第五行：风向+风力（黑色，16号字体），Y=214
+ *         显示之前先清屏为白色背景
+ *         使用sprintf格式化为显示字符串
  */
 void Weather_Display(const WeatherData *w)
 {
     char line[32];
 
-    /* 清屏 */
+    /* 清屏，白色背景填充整个320x240屏幕 */
     Lcd_Clear(0, 0, 320, 240, WHITE);
 
-    /* 显示城市名 */
+    /* 显示城市名称 */
     if (strlen(w->cityName) > 0)
-        Lcd_DisplayStr(10, 10, RED, WHITE, 32, (u8 *)w->cityName);
+        Lcd_DisplayStr(10, 74, RED, WHITE, 32, (u8 *)w->cityName);
 
     /* 显示温度 */
     sprintf(line, "温度: %d C", w->qw);
-    Lcd_DisplayStr(10, 55, BLACK, WHITE, 24, (u8 *)line);
+    Lcd_DisplayStr(10, 119, BLACK, WHITE, 24, (u8 *)line);
 
     /* 显示天气状况 */
     if (strlen(w->tq) > 0)
-        Lcd_DisplayStr(10, 90, BLUE, WHITE, 24, (u8 *)w->tq);
+        Lcd_DisplayStr(10, 154, BLUE, WHITE, 24, (u8 *)w->tq);
 
     /* 显示湿度 */
     sprintf(line, "湿度: %d%%", w->sd);
-    Lcd_DisplayStr(10, 130, BLACK, WHITE, 16, (u8 *)line);
+    Lcd_DisplayStr(10, 194, BLACK, WHITE, 16, (u8 *)line);
 
-    /* 显示风向风力 */
+    /* 显示风向和风力 */
     if (strlen(w->fx) > 0 && strlen(w->fl) > 0)
     {
         sprintf(line, "风向: %s %s", w->fx, w->fl);
-        Lcd_DisplayStr(10, 150, BLACK, WHITE, 16, (u8 *)line);
+        Lcd_DisplayStr(10, 214, BLACK, WHITE, 16, (u8 *)line);
     }
 }

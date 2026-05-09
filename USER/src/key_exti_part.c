@@ -1,37 +1,62 @@
 /**
- * @brief æŒ‰é”®GPIOä¸­æ–­åˆå§‹åŒ– (PA0 - EXTI0)
+ * @file key_exti_part.c
+ * @brief °´¼üEXTIÖĞ¶Ï³õÊ¼»¯Óë·şÎñº¯ÊıÔ´ÎÄ¼ş£¨¶ÀÁ¢Ä£¿é£©
+ * @details ±¾ÎÄ¼şµ¥¶ÀÌáÈ¡°´¼üµÄÍâ²¿ÖĞ¶Ï³õÊ¼»¯ÓëÖĞ¶Ï·şÎñº¯Êı£¬
+ *          ÓÃÓÚÊµÏÖPA0Òı½ÅµÄÉÏÉıÑØÖĞ¶Ï´¥·¢¹¦ÄÜ¡£
+ *          Óëkey.cÖĞµÄÍ¬Ãûº¯Êı¹¦ÄÜÏàÍ¬£¬¿É×÷Îª¶ÀÁ¢Ä£¿éÊ¹ÓÃ
+ * @author He
+ * @date 2026-04-25
+ */
+
+/**
+ * @brief °´¼üGPIOÖĞ¶Ï³õÊ¼»¯ (PA0 - EXTI0)
  * @param void
  * @retval void
+ * @details ÅäÖÃPA0Òı½ÅÎªEXTIÖĞ¶ÏÊäÈë£¬ÉÏÉıÑØ´¥·¢£¬
+ *          ÖĞ¶ÏÓÅÏÈ¼¶ÉèÖÃÎªÇÀÕ¼ÓÅÏÈ¼¶1¡¢×ÓÓÅÏÈ¼¶1
+ * @note µ÷ÓÃ´Ëº¯ÊıÇ°ĞèÒªÏÈÊ¹ÄÜGPIOAÊ±ÖÓ²¢³õÊ¼»¯PA0Òı½Å
  */
 void Key_EXTI_Init(void)
 {
+    /* Ê¹ÄÜAFIO£¨¸´ÓÃ¹¦ÄÜI/O£©Ê±ÖÓ£¬Íâ²¿ÖĞ¶Ï¹¦ÄÜĞèÒªAFIOÊ±ÖÓÖ§³Ö */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 
+    /* ½«PA0Òı½ÅÁ¬½Óµ½EXTIÏßÂ·0£¬½¨Á¢GPIOÒı½ÅÓëEXTIÍâÉèµÄÓ³Éä¹ØÏµ */
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource0);
 
+    /* ÅäÖÃEXTIÍâÉè²ÎÊı */
     EXTI_InitTypeDef EXTI_InitStruct;
-    EXTI_InitStruct.EXTI_Line = EXTI_Line0;
-    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
-    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;
-    EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+    EXTI_InitStruct.EXTI_Line = EXTI_Line0;              /* Ñ¡ÔñÍâ²¿ÖĞ¶ÏÏßÂ·0 */
+    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;     /* ÉèÖÃÎªÖĞ¶ÏÄ£Ê½£¬²úÉúÖĞ¶ÏĞÅºÅ¸øNVIC */
+    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;  /* ÉÏÉıÑØ´¥·¢£º°´¼ü°´ÏÂË²¼äµçÆ½ÓÉµÍ±ä¸ß */
+    EXTI_InitStruct.EXTI_LineCmd = ENABLE;               /* Ê¹ÄÜEXTIÏßÂ·0 */
     EXTI_Init(&EXTI_InitStruct);
 
+    /* ÅäÖÃNVICÇ¶Ì×ÏòÁ¿ÖĞ¶Ï¿ØÖÆÆ÷£¬Éè¶¨ÖĞ¶ÏÓÅÏÈ¼¶ */
     NVIC_InitTypeDef NVIC_InitStruct;
-    NVIC_InitStruct.NVIC_IRQChannel = EXTI0_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 1;
-    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_InitStruct.NVIC_IRQChannel = EXTI0_IRQn;            /* EXTI0ÖĞ¶ÏÍ¨µÀºÅ */
+    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 1;   /* ÇÀÕ¼ÓÅÏÈ¼¶Îª1£¨ÊıÖµÔ½Ğ¡ÓÅÏÈ¼¶Ô½¸ß£© */
+    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;          /* ×ÓÓÅÏÈ¼¶Îª1 */
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;             /* Ê¹ÄÜEXTI0ÖĞ¶ÏÍ¨µÀ */
     NVIC_Init(&NVIC_InitStruct);
 }
 
 /**
- * @brief EXTI0ä¸­æ–­æœåŠ¡å‡½æ•° (PA0æŒ‰é”®)
+ * @brief EXTI0ÖĞ¶Ï·şÎñº¯Êı (PA0°´¼ü´¥·¢)
+ * @details µ±PA0Òı½Å¼ì²âµ½ÉÏÉıÑØĞÅºÅ£¨°´¼ü±»°´ÏÂ£©Ê±´¥·¢´ËÖĞ¶Ï¡£
+ *          ÖĞ¶Ï·şÎñº¯ÊıÖĞÉèÖÃÈ«¾Ö±êÖ¾Î»key_int_flagÎª1£¬
+ *          È»ºóÇå³ıÖĞ¶Ï¹ÒÆğÎ»£¬È·±£ÏÂ´ÎÖĞ¶ÏÄÜ¹»Õı³£´¥·¢
+ * @note ÖĞ¶Ïº¯ÊıÃûEXTI0_IRQHandlerÓÉÆô¶¯ÎÄ¼şÖĞµÄÖĞ¶ÏÏòÁ¿±í¶¨Òå£¬
+ *       ²»¿ÉËæÒâ¸ü¸Äº¯ÊıÃû
  */
 void EXTI0_IRQHandler(void)
 {
+    /* ÅĞ¶ÏEXTIÏßÂ·0ÊÇ·ñÈ·Êµ´¥·¢ÁËÖĞ¶ÏÇëÇó */
     if (EXTI_GetITStatus(EXTI_Line0) == SET)
     {
+        /* ½«°´¼üÖĞ¶Ï±êÖ¾Î»ÖÃ1£¬¹©Ö÷Ñ­»·»òÈÎÎñ´¦Àíº¯Êı²éÑ¯ */
         key_int_flag = 1;
+        /* Çå³ıEXTI0µÄÖĞ¶Ï¹ÒÆğ±êÖ¾Î»£¬·ÀÖ¹ÍË³öÖĞ¶ÏºóÁ¢¼´ÔÙ´Î½øÈë */
         EXTI_ClearITPendingBit(EXTI_Line0);
     }
 }
