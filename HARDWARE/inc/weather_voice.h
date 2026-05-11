@@ -18,6 +18,6 @@
  * @param hum          当前湿度值（百分比），将播报对应的湿度数字语音
  * @note 依次播报：天气现象 -> 温度 -> 湿度
  */
-void Weather_Voice_Play(u8 weather_file, int temp, u16 hum);
+void Weather_Voice_Play(u8 weather_file, int temp, u16 hum,u8 city_file);
 
 #endif

@@ -125,7 +125,7 @@ void WeatherTask(void *ptr)
 
                     Weather_Display(&weather_data);   /* 更新LCD显示 */
                     Weather_Voice_Play(weather_data.voice_file,
-                                       weather_data.qw, weather_data.sd);  /* 语音播报 */
+                                       weather_data.qw, weather_data.sd,10+current_city_idx);  /* 语音播报 */
                 }
                 else
                 {
@@ -197,8 +197,8 @@ void DisplayTask(void *ptr)
         Lcd_DisplayStr(80, 40, BLACK, WHITE, 32, (u8 *)line);
 
 
-        /* 延时2秒 */
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        /* 延时3秒 ,等工程调试好后改为60s更新一次*/
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }
 

@@ -40,7 +40,6 @@ void W25Qxx_Config(void)
 返回值：无
 形参：无
 函数说明：
-
 ***************************/
 void W25q64_ReadID(void)
 {
@@ -116,7 +115,6 @@ u8 Read_StatusReg(void)
 形参：u32 addr    地址
 函数说明：
 ***************************/
-
 void Sector_Erase(u32 addr)
 {
     
@@ -208,10 +206,8 @@ void Block_Erase(u32 addr)
 形参：void
 函数说明：
 ***************************/
-
 void Chip_Erase(void)
 {
-    
     
     Write_Enable();//写使能
     
@@ -312,51 +308,56 @@ void Read_Data(u32 addr,u32 len,u8 *data)
 
 
 
-/**************************
-函数功能：夸页写
-返回值：void
-形参：
-    u32 addr    地址
-    u32 len     数据长度
-    u8 *data    指向1byte数据
-函数说明：
-
-"1234567"
-***************************/
-
-void W25Q64_CrossPageWrite(u32 addr,u32 len,u8 *data)
+/**
+ * 函数功能：跨页写（突破 W25Q64 每页256字节的限制）
+ * 说明：W25Q64 每页最多写256字节，如果数据跨页了
+ *       需要自动切到下一页继续写
+ * 形参：
+ *     u32 addr    起始地址
+ *     u32 len     数据总长度
+ *     u8 *data    要写入的数据指针
+ */
+void W25Q64_CrossPageWrite(u32 addr, u32 len, u8 *data)
 {
-     u16 less_len = 0;
-    
+    u16 less_len = 0;
+
+    /* 计算当前页还剩多少字节可以写
+       例如：addr=200，256-200%256=56，表示当前页还剩56个字节 */
     less_len = 256 - addr % 256;
-    
-    if(len <= less_len)//当前页写得完
+
+    /* 如果要写的总数据 ≤ 当前页剩余空间，说明一页就能写完 */
+    if(len <= less_len)
     {
-        less_len = len;
+        less_len = len;  // 一次写完，不用分页
     }
-    
+
     while(1)
     {
-        Page_Write(addr,less_len,data);
-        //循环结束条件
+        Page_Write(addr, less_len, data);  // 写入当前页
+
+        /* 如果已写入长度 == 总数据长度，写完了退出 */
         if(less_len == len)
         {
             break;
         }
-        addr += less_len;//跨页
-        len -= less_len;//总数据长度减去已写入数据大小
-        data += less_len;//数据偏移已写入数据大小
-        //判断跨完页后写不写得完
-        if(len <= 256)
+
+        /* 还没写完，准备写下一页 */
+        addr += less_len;     // 地址跳到下一页开头
+        len -= less_len;      // 剩余待写数据减掉已写的
+        data += less_len;     // 数据指针后移，跳过已写的部分
+
+        /* 判断下一页能不能一次性写完 */
+        if(len <= 256)            // 剩余数据 ≤ 一页容量
         {
-            less_len = len;
+            less_len = len;       // 一次写完
         }
-        else if(len > 256)
+        else if(len > 256)        // 剩余数据还是超过一页
         {
-            less_len = 256;
-        } 
-    }   
+            less_len = 256;       // 继续按整页写，等下轮循环
+        }
+    }
 }
+
 
 
 

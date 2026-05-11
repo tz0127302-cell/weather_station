@@ -110,12 +110,12 @@ static void Wait_Play_Done(u32 timeout_ms)
  *         02号文件夹：短语片段(如"目前")
  *         03号文件夹：天气状况语音(如"晴"、"多云"、"阵雨"等)
  */
-void Weather_Voice_Play(u8 weather_file, int temp, u16 hum)
+void Weather_Voice_Play(u8 weather_file, int temp, u16 hum,u8 city_file)
 {/* 先播放一个唤醒音(第一分区内的一段提示音，当前被注释未启用) */
-    MY1680_Play(0x02, 10);
+    MY1680_Play(0x02, city_file);
     Wait_Play_Done(3000);
     /* 1. 播放 "目前" */
-    MY1680_Play(0x02, 10);
+    MY1680_Play(0x02, city_file);
     Wait_Play_Done(3000);
 
     /* 2. 播放天气状况(如晴、多云、雨等) */
@@ -134,6 +134,10 @@ void Weather_Voice_Play(u8 weather_file, int temp, u16 hum)
 
     /* 5. 播放 "度" */
     MY1680_Play(0x00, 11);               /* 温度单位"度" */
+    Wait_Play_Done(3000);
+
+    /* 6. 播放 “室外湿度” */
+    MY1680_Play(0x00, 24);               /* "百分比" */
     Wait_Play_Done(3000);
 
     /* 6. 播放 "%" 湿度提示前缀 */

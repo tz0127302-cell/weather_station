@@ -43,7 +43,7 @@ void Lcd_Port_Config(void)
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_15;
     GPIO_Init(GPIOB,&GPIO_InitStruct);
     // 设置初始化电平：片选拉高(禁用)，背光关闭，复位拉高(正常工作)
-    LCD_CS_H;
+    LCD_CS_H; 
     LCD_BLK_OFF;
     LCD_RST_H;
 
