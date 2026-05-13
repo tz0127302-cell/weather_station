@@ -35,7 +35,7 @@ int main()
     MY1680_Config();       /* 初始化 MY1680: 语音合成模块, UART5 */
     Wifi_NtpInit();        /* 初始化 WiFi + NTP: ESP-12F, 连接AP并同步时间 */
     Rtc_Init();            /* 初始化 RTC: 内部实时时钟, 1Hz */
-    Key_EXTI_Init();       /* 初始化按键EXTI: PA0, 上升沿触发中断 */
+    Key_Init();            /* 初始化按键: PA0, 上拉输入 */
 
     /*==================== 第2步：创建启动任务 ====================*/
 

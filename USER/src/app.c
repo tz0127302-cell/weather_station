@@ -17,11 +17,7 @@
  *============================================================*/
 
 /* 室内温湿度结构体, volatile 防止编译器优化 */
-volatile struct
-{
-    uint8_t temp;  /* 温度, 单位: 摄氏度 */
-    uint8_t humi;  /* 湿度, 单位: 百分比 */
-} indoor_data;
+volatile struct _indoor_data indoor_data;
 
 /* 当前城市的天气数据 (包含城市名, 天气状况, 温度, 湿度等) */
 WeatherData weather_data;
@@ -52,7 +48,6 @@ TaskHandle_t Task3Handle;              /* DisplayTask 句柄 */
 extern TaskHandle_t StartTaskHandle;   /* 启动任务句柄 (在 main.c) */
 
 /* 队列命令码 */
-#define CMD_SWITCH_CITY   1            /* 切换城市命令 */
 
 /*============================================================*
  * 函数名: Timer1Callback
@@ -131,6 +126,13 @@ void WeatherTask(void *ptr)
                 {
                     printf("weather fetch failed for city %d\r\n", current_city_idx);
                 }
+            }
+            else if (cmd == CMD_WEATHER_VOICE)
+            {
+                /* voice command: broadcast cached weather via WeatherTask */
+                Weather_Voice_Play(weather_data.voice_file,
+                                   weather_data.qw, weather_data.sd,
+                                   10 + current_city_idx);
             }
         }
     }

@@ -9,8 +9,7 @@
 
 #include "key.h"
 
-/* 按键中断标志位，volatile防止编译器优化，确保每次从内存读取 */
-volatile uint8_t key_int_flag = 0;
+
 
 
 /**
@@ -55,53 +54,3 @@ uint8_t Key_Scan(void)
     return 0;
 }
 
-
-/**
- * @brief 按键EXTI中断初始化 (PA0 - EXTI0)
- * @param void
- * @retval void
- * @details 配置PA0的外部中断功能，上升沿触发中断，
- *          设置中断优先级为抢占优先级1、子优先级1
- */
-void Key_EXTI_Init(void)
-{
-    /* 使能AFIO（复用功能I/O）时钟，外部中断需要AFIO支持 */
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
-
-    /* 将PA0引脚映射到EXTI0线路，即PA0的电平变化可触发EXTI0中断 */
-    GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource0);
-
-    /* 配置EXTI0中断参数 */
-    EXTI_InitTypeDef EXTI_InitStruct;
-    EXTI_InitStruct.EXTI_Line = EXTI_Line0;              /* 选择EXTI线路0 */
-    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;     /* 配置为中断模式（非事件模式） */
-    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;  /* 上升沿触发：按键按下时电平由低变高 */
-    EXTI_InitStruct.EXTI_LineCmd = ENABLE;               /* 使能该EXTI线路 */
-    EXTI_Init(&EXTI_InitStruct);
-
-    /* 配置NVIC嵌套向量中断控制器 */
-    NVIC_InitTypeDef NVIC_InitStruct;
-    NVIC_InitStruct.NVIC_IRQChannel = EXTI0_IRQn;            /* EXTI0中断通道 */
-    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 1;   /* 抢占优先级为1 */
-    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;          /* 子优先级为1 */
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;             /* 使能该中断通道 */
-    NVIC_Init(&NVIC_InitStruct);
-}
-
-/**
- * @brief EXTI0中断服务函数 (PA0按键触发)
- * @details 当PA0检测到上升沿（按键按下）时进入此中断，
- *          设置按键中断标志位key_int_flag为1，供主循环查询，
- *          并清除中断挂起位，防止重复触发
- */
-void EXTI0_IRQHandler(void)
-{
-    /* 检查EXTI0线路是否确实产生了中断 */
-    if (EXTI_GetITStatus(EXTI_Line0) == SET)
-    {
-        /* 设置按键中断标志位为1，通知主循环有按键事件发生 */
-        key_int_flag = 1;
-        /* 清除EXTI0线路的中断挂起标志，避免重复进入中断 */
-        EXTI_ClearITPendingBit(EXTI_Line0);
-    }
-}

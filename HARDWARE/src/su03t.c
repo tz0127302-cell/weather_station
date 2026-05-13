@@ -1,9 +1,8 @@
 /**
  * @file su03t.c
- * @brief SU03TÓïÒôÊ¶±ğÄ£¿éÇı¶¯³ÌĞòÔ´ÎÄ¼ş
- * @details ÊµÏÖSU03TÄ£¿éµÄUARTÍ¨ĞÅ½Ó¿Ú£¬°üÀ¨Ä£¿é³õÊ¼»¯¡¢
- *         ÖĞ¶Ï½ÓÊÕºÍÓïÒôÖ¸Áî½âÎö´¦Àí¡£Ê¹ÓÃSTM32µÄUART4
- *         ÓëSU03TÍ¨ĞÅ£¬Í¨¹ıRXNEºÍIDLEÖĞ¶Ï½ÓÊÕ²»¶¨³¤Êı¾İÖ¡¡£
+ * @brief SU03Tè¯­éŸ³è¯†åˆ«æ¨¡å—é©±åŠ¨æºæ–‡ä»¶
+ * @details å®ç°SU03Tæ¨¡å—çš„UARTé€šä¿¡æ¥å£ï¼ŒåŒ…æ‹¬æ¨¡å—åˆå§‹åŒ–ã€
+ *         ä¸­æ–­æ¥æ”¶å’Œè¯­éŸ³æŒ‡ä»¤å¤„ç†ã€‚ä½¿ç”¨STM32çš„UART4ä¸SU03Té€šä¿¡ã€‚
  * @author He
  * @date 2026-04-25
  */
@@ -12,170 +11,294 @@
 
 
 /**
-  * @brief SU03TÒı½Å¼°UART4³õÊ¼»¯
-  * @param  void
-  * @retval void
-  * @note Òı½ÅÁ¬½Ó£º
-  *       VOICE_TXD   ---   PC10   ---   SU03T·¢ËÍ -> STM32½ÓÊÕ
-  *       VOICE_RXD   ---   PC11   ---   STM32·¢ËÍ -> SU03T½ÓÊÕ
-  * @details ³õÊ¼»¯Á÷³Ì£º
-  *         1. Ê¹ÄÜGPIOCÊ±ÖÓ
-  *         2. ÅäÖÃPC10Îª¸´ÓÃÍÆÍìÊä³ö£¨UART4_TX£©
-  *         3. ÅäÖÃPC11Îª¸¡¿ÕÊäÈë£¨UART4_RX£©
-  *         4. Ê¹ÄÜUART4Ê±ÖÓ£¬ÅäÖÃ9600-8-N-1´®¿Ú²ÎÊı
-  *         5. Ê¹ÄÜ½ÓÊÕÖĞ¶Ï(RXNE)ºÍ¿ÕÏĞÖĞ¶Ï(IDLE)
-  *         6. ÅäÖÃNVICÖĞ¶ÏÓÅÏÈ¼¶£¨ÇÀÕ¼ÓÅÏÈ¼¶2£¬×ÓÓÅÏÈ¼¶2£©
-  *         7. Ê¹ÄÜUART4
+  * @brief SU03Tå¼•è„šåŠUART4åˆå§‹åŒ–
   */
-
 void SU_03T_Config(void)
 {
-
-    /* Ê¹ÄÜGPIOCÊ±ÖÓ */
+    /* ä½¿èƒ½GPIOCæ—¶é’Ÿ */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
 
-    /* ³õÊ¼»¯VOICE_TXD (PC10) --- ¸´ÓÃÍÆÍìÊä³ö */
+    /* åˆå§‹åŒ–VOICE_TXD (PC10) --- å¤ç”¨æ¨æŒ½è¾“å‡º */
     GPIO_InitTypeDef GPIO_InitStructure={0};
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;      /* ¸´ÓÃÍÆÍìÊä³ö */
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-    /* ³õÊ¼»¯VOICE_RXD (PC11) --- ¸¡¿ÕÊäÈë */
+    /* åˆå§‹åŒ–VOICE_RXD (PC11) --- æµ®ç©ºè¾“å…¥ */
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING; /* ¸¡¿ÕÊäÈë */
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-    /* Ê¹ÄÜUART4Ê±ÖÓ£¨UART4¹ÒÔØÔÚAPB1×ÜÏßÉÏ£© */
+    /* ä½¿èƒ½UART4æ—¶é’Ÿ */
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);
 
-    /* ³õÊ¼»¯UART4´®¿Ú²ÎÊı */
+    /* åˆå§‹åŒ–UART4: 9600-8-N-1 */
     USART_InitTypeDef USART_InitStructure={0};
-    USART_InitStructure.USART_BaudRate = 9600;              /* ²¨ÌØÂÊ£º9600 */
-    USART_InitStructure.USART_WordLength = USART_WordLength_8b;  /* Êı¾İÎ»£º8Î» */
-    USART_InitStructure.USART_StopBits = USART_StopBits_1;       /* Í£Ö¹Î»£º1Î» */
-    USART_InitStructure.USART_Parity = USART_Parity_No;         /* ÎŞĞ£ÑéÎ» */
-    USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None; /* ÎŞÓ²¼şÁ÷¿ØÖÆ */
-    USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;  /* Ê¹ÄÜ½ÓÊÕºÍ·¢ËÍ */
+    USART_InitStructure.USART_BaudRate = 9600;
+    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+    USART_InitStructure.USART_StopBits = USART_StopBits_1;
+    USART_InitStructure.USART_Parity = USART_Parity_No;
+    USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+    USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
     USART_Init(UART4, &USART_InitStructure);
 
-    /* Ê¹ÄÜ½ÓÊÕÖĞ¶ÏºÍ¿ÕÏĞÖĞ¶Ï */
-    USART_ITConfig(UART4, USART_IT_RXNE, ENABLE);  /* ½ÓÊÕÖĞ¶ÏÊ¹ÄÜ£ºÃ¿ÊÕµ½Ò»¸ö×Ö½Ú´¥·¢ */
-    USART_ITConfig(UART4, USART_IT_IDLE, ENABLE);  /* ¿ÕÏĞÖĞ¶ÏÊ¹ÄÜ£º½ÓÊÕÍêÒ»Ö¡Êı¾İ£¨×ÜÏß¿ÕÏĞ£©Ê±´¥·¢ */
+    /* ä½¿èƒ½æ¥æ”¶ä¸­æ–­å’Œç©ºé—²ä¸­æ–­ */
+    USART_ITConfig(UART4, USART_IT_RXNE, ENABLE);
+    USART_ITConfig(UART4, USART_IT_IDLE, ENABLE);
 
-
-    /* ÅäÖÃNVICÇ¶Ì×ÏòÁ¿ÖĞ¶Ï¿ØÖÆÆ÷ */
+    /* é…ç½®NVIC */
     NVIC_InitTypeDef NVIC_InitStructure;
-    NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;             /* UART4ÖĞ¶ÏÍ¨µÀ */
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;    /* ÇÀÕ¼ÓÅÏÈ¼¶£º2 */
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;           /* ×ÓÓÅÏÈ¼¶£º2 */
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;              /* Ê¹ÄÜÖĞ¶ÏÍ¨µÀ */
+    NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
 
-
-    /* Ê¹ÄÜUART4 */
+    /* ä½¿èƒ½UART4 */
     USART_Cmd(UART4, ENABLE);
-
 }
 
 /**
-  * @brief UART4ÖĞ¶Ï·şÎñº¯Êı
-  * @param  void
-  * @retval void
-  * @details ´¦ÀíÁ½ÖÖÖĞ¶ÏÊÂ¼ş£º
-  *         1. RXNE£¨½ÓÊÕÊı¾İ¼Ä´æÆ÷·Ç¿ÕÖĞ¶Ï£©£º
-  *            Ã¿ÊÕµ½Ò»¸ö×Ö½Ú´¥·¢£¬½«Êı¾İ´æÈë»º³åÇø²¢µİÔö³¤¶È¼ÆÊıÆ÷¡£
-  *         2. IDLE£¨¿ÕÏĞÖĞ¶Ï£©£º
-  *            µ±½ÓÊÕÍêÒ»Ö¡Êı¾İ£¨×ÜÏß¿ÕÏĞ³¬¹ıÒ»¸ö×Ö·ûÊ±¼ä£©Ê±´¥·¢£¬
-  *            ÉèÖÃ±êÖ¾Î»Í¨ÖªÖ÷Ñ­»·´¦ÀíÊı¾İ¡£
-  *            IDLEÖĞ¶ÏµÄÇå³ı·½Ê½£ºÏÈ¶ÁSR¼Ä´æÆ÷£¬ÔÙ¶ÁDR¼Ä´æÆ÷¡£
+  * @brief UART4ä¸­æ–­æœåŠ¡å‡½æ•°
+  * @note  RXNE: æ¯æ”¶åˆ°ä¸€ä¸ªå­—èŠ‚è§¦å‘ï¼Œå­˜å…¥ç¼“å†²åŒº
+  *        IDLE: æ€»çº¿ç©ºé—²æ—¶è§¦å‘ï¼Œè®¾ç½®flag=1é€šçŸ¥ä¸»å¾ªç¯
   */
-SU03T_Data su03t;                    /* SU03TÊı¾İ½ÓÊÕ½á¹¹ÌåÈ«¾Ö±äÁ¿ */
+volatile SU03T_Data su03t;
 void UART4_IRQHandler(void)
 {
-    /* ´¦ÀíRXNEÖĞ¶Ï£º½ÓÊÕµ½Ò»¸ö×Ö½Ú */
+    /* å¤„ç†RXNEä¸­æ–­ */
     if(USART_GetITStatus(UART4, USART_IT_RXNE) == SET)
     {
-        /* Çå³ı½ÓÊÕÖĞ¶Ï±êÖ¾Î» */
         USART_ClearITPendingBit(UART4, USART_IT_RXNE);
-        /* ÓÃ»§´úÂë£º¶ÁÈ¡½ÓÊÕµ½µÄÊı¾İ²¢´æÈë»º³åÇø */
-        su03t.buff[su03t.len++] = USART_ReceiveData(UART4);
-        /* ×¢Òâ£º´Ë´¦Î´×ö»º³åÇøÒç³ö±£»¤£¬ĞèÈ·±£buff×ã¹»´ó */
+        if(su03t.len < 4)
+        {
+            su03t.buff[su03t.len] = USART_ReceiveData(UART4);
+            su03t.len++;
+        }
+        else
+        {
+            /* ç¼“å†²åŒºæ»¡æ—¶å¿…é¡»è¯»DRå¯„å­˜å™¨ä»¥æ¸…é™¤RXNEæ ‡å¿—ä½ï¼Œå¦åˆ™ä¸­æ–­åå¤è§¦å‘å¯¼è‡´æ­»å¾ªç¯ */
+            volatile u8 dummy = USART_ReceiveData(UART4);
+            (void)dummy;   /* æ¶ˆé™¤"å˜é‡æœªä½¿ç”¨"çš„ç¼–è¯‘è­¦å‘Š */
+        }
+
     }
-    /* ´¦ÀíIDLEÖĞ¶Ï£ºÒ»Ö¡Êı¾İ½ÓÊÕÍê±Ï£¨×ÜÏß¿ÕÏĞ£© */
+    /* å¤„ç†IDLEä¸­æ–­: ä¸€å¸§æ¥æ”¶å®Œæ¯• */
     if(USART_GetITStatus(UART4, USART_IT_IDLE) == SET)
     {
-        /* Çå³ı¿ÕÏĞÖĞ¶Ï±êÖ¾Î»£ºÏÈ¶ÁSRÔÙ¶ÁDR£¨STM32±ê×¼Çå³ı·½Ê½£© */
         UART4->SR;
         UART4->DR;
-        /* ÓÃ»§´úÂë£ºÖ¡½ÓÊÕÍê³É£¬ÉèÖÃ±êÖ¾ */
 
-        su03t.len = 0;          /* ÖØÖÃ³¤¶È¼ÆÊıÆ÷£¬×¼±¸½ÓÊÕÏÂÒ»Ö¡ */
-        su03t.flag = 1;         /* ÉèÖÃ½ÓÊÕÍê³É±êÖ¾£¬Í¨ÖªÖ÷Ñ­»·´¦Àí */
+        su03t.len = 0;
+        su03t.flag = 1;
 
-        /* ´òÓ¡½ÓÊÕµ½µÄÊı¾İ£¨Ç°4×Ö½Ú£©£¬ÓÃÓÚµ÷ÊÔ */
-        for(u8 i=0;i<4;i++)
-        {
-            printf("%02x ",su03t.buff[i]);    /* ÒÔÊ®Áù½øÖÆ¸ñÊ½´òÓ¡ */
-        }
-        printf("\r\n");
-
-
+        /* DEBUG: æ‰“å°æ”¶åˆ°çš„æŒ‡ä»¤, æ ‡æ³¨æ˜¯å¦åœ¨æ’­æŠ¥æœŸé—´æ”¶åˆ° */
+        printf("[SU03T] RX: %02x %02x %02x %02x (busy=%d)\r\n",
+               su03t.buff[0], su03t.buff[1], su03t.buff[2], su03t.buff[3],
+               voice_busy);
     }
-
 }
 
 
+/* ======================== éŸ³ä¹æ’­æ”¾çŠ¶æ€ ======================== */
+static u8 current_track = 0;  /* å½“å‰æ’­æ”¾çš„éŸ³ä¹è½¨é“ç´¢å¼• */
+static const u8 total_tracks = 2;  /* æ€»éŸ³ä¹è½¨é“æ•° */
 
-
+/* ======================== è¯­éŸ³æ’­æŠ¥ä¿æŠ¤æ ‡å¿— ========================
+ * voice_busy:  1=æ­£åœ¨æ’­æŠ¥
+ * voice_abort: 1=éœ€è¦ä¸­æ­¢å½“å‰æ’­æŠ¥
+ * volatile: WeatherTaskå†™å…¥, KeyTaskè¯»å–, è·¨ä»»åŠ¡å…±äº«
+ *==================================================================*/
+volatile u8 voice_busy = 0;  /* æ’­æŠ¥å¿™æ ‡å¿—: 1=æ­£åœ¨æ’­æŠ¥ 0=ç©ºé—², å¿™æ—¶åªå“åº”æš‚åœ/åœæ­¢ */
+volatile u8 voice_abort = 0;  /* æ’­æŠ¥ä¸­æ­¢æ ‡å¿—: 1=éœ€è¦ä¸­æ­¢å½“å‰æ’­æŠ¥, ç”±æš‚åœ/åœæ­¢æŒ‡ä»¤è®¾ç½® */
+static u8 voice_cooldown = 0;     /* æ’­æŠ¥ç»“æŸåçš„å†·å´è®¡æ•°(å•ä½: 20ms), æœŸé—´ä¸¢å¼ƒæ‰€æœ‰æŒ‡ä»¤ */
 
 /**
-  * @brief ÓïÒôÊ¶±ğ¿ØÖÆ´¦Àíº¯Êı
-  * @param  void
-  * @retval void
-  * @details ÔÚÖ÷Ñ­»·ÖĞµ÷ÓÃ£¬¼ì²éSU03TÊ¶±ğµ½µÄÓïÒôÖ¸Áî¡£
-  *         µ±½ÓÊÕÍê³É±êÖ¾ÖÃÎ»Ê±£¬½âÎöÊı¾İÖ¡µÄµÚÒ»¸ö×Ö½Ú£º
-  *         0x00 --- ¿ªµÆÖ¸Áî£º²¥·Å"¿ªµÆ"ÒôÆµ
-  *         0x01 --- ÁÁµÆÖ¸Áî£ºµãÁÁLED1ºÍLED2£¬²¥·Å"ÒÑÁÁµÆ"ÒôÆµ
-  *         0x02 --- ¹ØµÆÖ¸Áî£ºÏ¨ÃğLED1ºÍLED2£¬²¥·Å"ÒÑ¹ØµÆ"ÒôÆµ
-  *         ´¦ÀíÍê³ÉºóÇå³ı±êÖ¾Î»£¬µÈ´ıÏÂÒ»´ÎÖ¸Áî¡£
-  * @note SU03TÃ¿´ÎÊ¶±ğµ½ÓïÒôºó£¬»áÍ¨¹ıUART·¢ËÍ¹Ì¶¨¸ñÊ½µÄÊı¾İÖ¡£¬
-  *       µÚÒ»¸ö×Ö½ÚÎªÖ¸ÁîÂë£¬¶ÔÓ¦²»Í¬µÄÓïÒôÃüÁî¡£
-  */
-
+ * @brief è¯­éŸ³è¯†åˆ«æ§åˆ¶å¤„ç†å‡½æ•°
+ * @details ç”±KeyTaskæ¯20msè½®è¯¢ä¸€æ¬¡ã€‚
+ *         - cooldownæœŸé—´: ä¸¢å¼ƒæ‰€æœ‰æŒ‡ä»¤
+ *         - voice_busyæœŸé—´: åªå…è®¸0x08/0x09/0x0A/0x0Bé€šè¿‡
+ */
 void SU_03T_Control(void)
 {
-    if(su03t.flag == 1)              /* ¼ì²éÊÇ·ñÓĞĞÂµÄÓïÒôÊ¶±ğÊı¾İµ½´ï */
+    /* æ’­æŠ¥ç»“æŸåçš„å†·å´æœŸï¼šæ¯æ”¶åˆ°æŒ‡ä»¤é‡ç½®å€’è®¡æ—¶ï¼Œè¿ç»­2ç§’æ— æŒ‡ä»¤æ‰ç»“æŸ */
+    if (voice_cooldown > 0)
     {
-        /* ¸ù¾İÖ¸ÁîÂëÖ´ĞĞ¶ÔÓ¦²Ù×÷ */
-         switch(su03t.buff[0])
+        voice_cooldown--;
+        if (su03t.flag == 1)
         {
-            case 0x00:              /* ¿ªµÆÖ¸Áî */
-                MY1680_Play(0x02, 0x06);   /* ²¥·Å"¿ªµÆ"ÓïÒôÌáÊ¾ */
-                break;
-            case 0x01:              /* ÁÁµÆÖ¸Áî */
-                LED1_ON;            /* LED1µãÁÁ */
-                LED2_ON;            /* LED2µãÁÁ */
-                MY1680_Play(0x02, 0x07);   /* ²¥·Å"ÒÑÁÁµÆ"ÓïÒôÌáÊ¾ */
-                break;
-            case 0x02:              /* ¹ØµÆÖ¸Áî */
-                LED1_OFF;           /* LED1Ï¨Ãğ */
-                LED2_OFF;           /* LED2Ï¨Ãğ */
-                MY1680_Play(0x02, 0x08);   /* ²¥·Å"ÒÑ¹ØµÆ"ÓïÒôÌáÊ¾ */
-                break;
-            default:
-                /* Î´Ê¶±ğµÄÖ¸ÁîÂë£¬²»×ö´¦Àí */
-                break;
+            printf("[SU03T] COOLDOWN(%d): cmd=0x%02X discarded\r\n",
+                   voice_cooldown, su03t.buff[0]);
+            su03t.flag = 0;
+            voice_cooldown = 100;    /* æ”¶åˆ°æŒ‡ä»¤é‡ç½®å†·å´ï¼Œç¡®ä¿è¿ç»­2ç§’æ— æ•°æ®æ‰é€€å‡º */
         }
-        su03t.flag = 0;             /* Çå³ı±êÖ¾Î»£¬×¼±¸½ÓÊÕÏÂÒ»ÌõÖ¸Áî */
+        if (voice_cooldown == 0)
+        {
+            voice_busy = 0;
+            printf("[SU03T] cooldown end, voice ready\r\n");
+        }
+        return;
     }
 
+    if(su03t.flag == 1)
+    {
+        u8 cmd = su03t.buff[0];
+        u8 cmd_buf;
+
+        /* æ’­æŠ¥å¿™æ—¶çš„æŒ‡ä»¤è¿‡æ»¤ */
+        if (voice_busy)
+        {
+            if (cmd == 0x0A || cmd == 0x0B)
+            {
+                printf("[SU03T] BUSY: cmd=0x%02X ALLOWED (stop/pause)\r\n", cmd);
+                voice_abort = 1;
+                voice_busy = 0;
+                UART5_SendBuff(stop, 5);
+            }
+            else if (cmd == 0x08 || cmd == 0x09)
+            {
+                printf("[SU03T] BUSY: cmd=0x%02X ALLOWED (prev/next)\r\n", cmd);
+                /* æ”¾è¡Œï¼Œç»§ç»­æ‰§è¡Œä¸‹æ–¹switch */
+            }
+            else
+            {
+                printf("[SU03T] BUSY: cmd=0x%02X BLOCKED\r\n", cmd);
+                su03t.flag = 0;
+                return;
+            }
+        }
+
+        switch(cmd)
+        {
+            case 0x00:  /* å”¤é†’ */
+                printf("[SU03T] CMD: wakeup\r\n");
+                MY1680_Play(0x02, 0x06);
+                break;
+
+            case 0x01:  /* å¼€ç¯ */
+                printf("[SU03T] CMD: light ON\r\n");
+                LED1_ON;
+                LED2_ON;
+                MY1680_Play(0x02, 0x07);
+                break;
+
+            case 0x02:  /* å…³ç¯ */
+                printf("[SU03T] CMD: light OFF\r\n");
+                LED1_OFF;
+                LED2_OFF;
+                MY1680_Play(0x02, 0x08);
+                break;
+
+            case 0x03:  /* æ’­æŠ¥å¤©æ°” */
+                printf("[SU03T] CMD: weather broadcast\r\n");
+                cmd_buf = CMD_WEATHER_VOICE;
+                xQueueSend(weatherCmdQueue, &cmd_buf, 0);
+                break;
+
+            case 0x04:  /* æ’­æŠ¥æ—¶é—´ */
+                printf("[SU03T] CMD: report time\r\n");
+                voice_busy = 1;
+                voice_abort = 0;
+                Voice_ReportTime();
+                voice_busy = 0;
+                break;
+
+            case 0x05:  /* æ’­æŠ¥å®¤å†…æ¸©åº¦ */
+                printf("[SU03T] CMD: report indoor temp\r\n");
+                voice_busy = 1;
+                voice_abort = 0;
+                Voice_ReportIndoorTemp();
+                voice_busy = 0;
+                break;
+
+            case 0x06:  /* æ’­æŠ¥å®¤å†…æ¹¿åº¦ */
+                printf("[SU03T] CMD: report indoor hum\r\n");
+                voice_busy = 1;
+                voice_abort = 0;
+                Voice_ReportIndoorHum();
+                voice_busy = 0;
+                break;
+
+            case 0x07:  /* æ’­æ”¾éŸ³ä¹ */
+                printf("[SU03T] CMD: play music track=%d\r\n", current_track);
+                MY1680_Play(0x01, current_track);
+                voice_busy = 1;
+                voice_abort = 0;
+                break;
+
+            case 0x08:  /* ä¸Šä¸€é¦– */
+                printf("[SU03T] CMD: prev track\r\n");
+                if(current_track > 0)
+                    current_track--;
+                else
+                    current_track = total_tracks - 1;
+                UART5_SendBuff(stop, 5);
+                MY1680_Play(0x01, current_track);
+                voice_busy = 1;
+                voice_abort = 0;
+                break;
+
+            case 0x09:  /* ä¸‹ä¸€é¦– */
+                printf("[SU03T] CMD: next track\r\n");
+                current_track = (current_track + 1) % total_tracks;
+                UART5_SendBuff(stop, 5);
+                MY1680_Play(0x01, current_track);
+                voice_busy = 1;
+                voice_abort = 0;
+                break;
+
+            case 0x0A:  /* æš‚åœ */
+                printf("[SU03T] CMD: pause\r\n");
+                UART5_SendBuff(stop, 5);
+                voice_busy = 0;
+                break;
+
+            case 0x0B:  /* åœæ­¢ */
+                printf("[SU03T] CMD: stop\r\n");
+                UART5_SendBuff(stop, 5);
+                voice_busy = 0;
+                break;
+
+            default:
+                printf("[SU03T] CMD: unknown 0x%02X\r\n", cmd);
+                break;
+        }
+        su03t.flag = 0;
+    }
 }
 
+/**
+ * @brief ç¦ç”¨SU-03Tçš„UART4ä¸­æ–­ï¼ˆæ’­æŠ¥æœŸé—´é™é»˜ï¼‰
+ * @note  æ’­æŠ¥å¤©æ°”/æ—¶é—´/æ¸©æ¹¿åº¦å‰è°ƒç”¨ã€‚
+ *        ç¦ç”¨æœŸé—´SU-03Tçš„æ•°æ®å¸§ä¸ä¼šè§¦å‘ISRï¼Œä»ç¡¬ä»¶å±‚é¢æœç»è¯¯è§¦å‘ã€‚
+ */
+void SU03T_DisableIRQ(void)
+{
+    printf("[SU03T] >>> IRQ DISABLED (mute) <<<\r\n");
+    USART_ITConfig(UART4, USART_IT_RXNE, DISABLE);
+    USART_ITConfig(UART4, USART_IT_IDLE, DISABLE);
+}
 
+/**
+ * @brief æ¢å¤SU-03Tçš„UART4ä¸­æ–­ï¼ˆæ’­æŠ¥ç»“æŸåï¼‰
+ * @note  æ¸…ç©ºæ’­æ”¾æœŸé—´ç§¯ç´¯çš„æ®‹ç•™æ•°æ®ã€pendingæ ‡å¿—å’ŒUARTé”™è¯¯æ ‡å¿—ã€‚
+ */
+void SU03T_EnableIRQ(void)
+{
+    printf("[SU03T] <<< IRQ ENABLED (unmute), cooldown 2s >>>\r\n");
+    su03t.len = 0;
+    su03t.flag = 0;
 
+    USART_ClearITPendingBit(UART4, USART_IT_RXNE);
+    USART_ClearITPendingBit(UART4, USART_IT_IDLE);
 
+    (void)UART4->SR;
+    (void)UART4->DR;
 
+    USART_ITConfig(UART4, USART_IT_RXNE, ENABLE);
+    USART_ITConfig(UART4, USART_IT_IDLE, ENABLE);
 
-
+    voice_cooldown = 300;    /* 300 * 20ms = 6ç§’åˆå§‹å†·å´ï¼Œè¶³å¤Ÿè¦†ç›–SU-03Tå»¶è¿Ÿ */
+}
