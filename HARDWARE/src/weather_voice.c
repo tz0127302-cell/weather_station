@@ -148,6 +148,10 @@ void Weather_Voice_Play(u8 weather_file, int temp, u16 hum, u8 city_file)
     Wait_Play_Done(3000);
     if (voice_abort) { VoicePlay_Exit(); return; }
 
+    //百分之
+    MY1680_Play(0x00, 23);
+    Wait_Play_Done(3000);
+    if (voice_abort) { VoicePlay_Exit(); return; }
     /* 7. 播报湿度数值 */
     MY1680_PlayNum((float)hum);
     Wait_Play_Done(3000);
@@ -169,9 +173,15 @@ void Voice_ReportTime(void)
 
     RTC_Analysis();
 
+
     /* === 播报年份 === */
     u16 y = rtc_time.year;
+    // MY1680_Play(0x00, y / 1000);//播放一个无效值
+    // MY1680_Play(0x00, y / 1000);
+    // MY1680_Play(0x00, y / 1000);
     MY1680_Play(0x00, y / 1000);
+    Wait_Play_Done(3000);
+    MY1680_Play(0x00, 2);
     Wait_Play_Done(3000);
     if (voice_abort) { VoicePlay_Exit(); return; }
     MY1680_Play(0x00, (y / 100) % 10);
@@ -260,10 +270,10 @@ void Voice_ReportIndoorHum(void)
     MY1680_Play(0x00, 13);                    /* "室内湿度" */
     Wait_Play_Done(3000);
     if (voice_abort) { VoicePlay_Exit(); return; }
-    MY1680_PlayNum((float)indoor_data.humi);
+    MY1680_Play(0x00, 23);                    /* "百分之" */
     Wait_Play_Done(3000);
     if (voice_abort) { VoicePlay_Exit(); return; }
-    MY1680_Play(0x00, 23);                    /* "百分之" */
+    MY1680_PlayNum((float)indoor_data.humi);
     Wait_Play_Done(3000);
 
     VoicePlay_Exit();

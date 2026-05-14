@@ -275,12 +275,15 @@ u8 Wifi_NtpInit(void)
     }
     printf("客户端模式成功\r\n");
     // 连接指定的WiFi热点(AP)
+    MY1680_Play(0x02, 0x03); /*正在连接网络*/
     ret = Wifi_SendCmd("AT+CWJAP=\"WIFI-6G\",\"11111111\"\r\n",15000);
     if(ret)
     {
         printf("连接AP失败\r\n");
+        MY1680_Play(0x02, 0x05); /*连接网络失败*/
         return 2;
     }
+    MY1680_Play(0x02, 0x04); /*连接网络成功*/
     printf("连接AP成功\r\n");
     // 开启透传模式，简化后续数据传输(无需每次发送AT+CIPSEND)
     ret = Wifi_SendCmd("AT+CIPMODE=1\r\n",2000);

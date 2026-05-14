@@ -21,6 +21,7 @@
 #include "led.h"             /* LED指示灯驱动: LED1(PC5), LED2(PC4), 提供 ON/OFF/TOGGLE 宏 */
 #include "usart1.h"          /* USART1串口驱动: 控制台输出(printf重定向), 波特率115200 */
 #include "delay.h"           /* 软件延时: delay_us(微秒), delay_ms(毫秒), NOP循环实现 */
+#include "pic.h"             /* 图片显示驱动: 用于显示桌面背景图 */
 #include "lcd.h"             /* LCD显示屏驱动: ST7789, 320x240, 16位色, 软件SPI驱动 */
 #include "key.h"             /* 按键驱动: PA0, 提供 Key_Scan() 和 EXTI 中断初始化 */
 #include "spi.h"             /* 硬件SPI驱动: 用于 W25Q64 Flash 通信 */

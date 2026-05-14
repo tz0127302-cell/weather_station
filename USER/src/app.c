@@ -1,5 +1,4 @@
 #include "app.h"
-
 /*============================================================*
  * 文件名: app.c
  * 功能: FreeRTOS 应用层任务管理
@@ -107,6 +106,7 @@ void WeatherTask(void *ptr)
         {
             if (cmd == CMD_SWITCH_CITY)
             {
+                Lcd_DisplayPic(0,0,gImage_desktop); /* 显示桌面背景图 */
                 /* 切换到下一个城市 */
                 current_city_idx = (current_city_idx + 1) % CITY_COUNT;
                 printf("switch to city %d\r\n", current_city_idx);
@@ -179,6 +179,8 @@ void DisplayTask(void *ptr)
     {
         char line[32];
         /* 串口打印室内温湿度 */
+        Lcd_DisplayPic(0,0,gImage_desktop); /* 显示桌面背景图 */
+        Weather_Display(&weather_data);   /* 更新LCD显示 */
         printf("Indoor: %dC, %d%%\r\n", indoor_data.temp, indoor_data.humi);
         /*屏幕显示室内温度*/
         Lcd_DisplayStr(160, 80, BLACK, WHITE, 24, (u8 *)"室温:");
@@ -200,7 +202,7 @@ void DisplayTask(void *ptr)
 
 
         /* 延时3秒 ,等工程调试好后改为60s更新一次*/
-        vTaskDelay(3000 / portTICK_PERIOD_MS);
+        vTaskDelay(60000 / portTICK_PERIOD_MS);
     }
 }
 

@@ -336,9 +336,7 @@ void Weather_Display(const WeatherData *w)
 {
     char line[32];
 
-    /* 清屏，白色背景填充整个320x240屏幕 */
-    Lcd_Clear(0, 0, 320, 240, WHITE);
-
+    Lcd_DisplayPic(0,0,gImage_desktop); /* 显示桌面背景图 */
     /* 显示城市名称 */
     if (strlen(w->cityName) > 0)
         Lcd_DisplayStr(10, 74, RED, WHITE, 32, (u8 *)w->cityName);
@@ -361,4 +359,23 @@ void Weather_Display(const WeatherData *w)
         sprintf(line, "风向: %s %s", w->fx, w->fl);
         Lcd_DisplayStr(10, 214, BLACK, WHITE, 16, (u8 *)line);
     }
+
+    /*同步更新一次室内温度和湿度，防止天气刷了屏幕导致显示错误*/
+    /*屏幕显示室内温度*/
+    Lcd_DisplayStr(160, 80, BLACK, WHITE, 24, (u8 *)"室温:");
+    sprintf(line, "%d℃", indoor_data.temp);
+    Lcd_DisplayStr(240, 80, BLACK, WHITE, 24, (u8 *)line);
+    /*屏幕显示室内湿度*/
+    Lcd_DisplayStr(160, 120, BLACK, WHITE, 24, (u8 *)"室湿:");
+    sprintf(line, "%d%%", indoor_data.humi);
+    Lcd_DisplayStr(240, 120, BLACK, WHITE, 24, (u8 *)line);
+    
+    /* 串口打印RTC日期时间 */
+    RTC_Analysis();
+    /* 屏幕显示RTC日期时间 */
+    sprintf(line, "%04d-%02d-%02d", rtc_time.year, rtc_time.month, rtc_time.day);
+    Lcd_DisplayStr(10, 10, BLACK, WHITE, 24, (u8 *)line);
+
+    sprintf(line, "%02d:%02d:%02d", rtc_time.hour, rtc_time.minute, rtc_time.second);
+    Lcd_DisplayStr(80, 40, BLACK, WHITE, 32, (u8 *)line);
 }

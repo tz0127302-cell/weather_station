@@ -421,10 +421,13 @@ void Lcd_DisplayChar(u16 x,u16 y,u16 font_color,u16 bg_color,u8 size,u8 eng)
                 }
                 else                                // 该位为0：绘制背景色
                 {
-                    Lcd_DrawPoint(x+j+k*8,y+i,bg_color);
+                    if(bg_color != 0xFFFF)  // 如果背景色不是白色，则绘制背景色
+                    {
+                        Lcd_DrawPoint(x+j+k*8,y+i,bg_color);
+                    }    
                 }
             }
-        }
+        } 
 
     }
 
@@ -487,7 +490,10 @@ void Lcd_DisplayChi(u16 x,u16 y,u16 font_color,u16 bg_color,u8 size,u8 *chi)
              }
              else
              {
-                 Lcd_DrawPoint(x+j+k*8,y+i,bg_color);    // 0：绘制背景色
+                 if(bg_color != 0xFFFF)  // 如果背景色不是白色，则绘制背景色
+                    {
+                        Lcd_DrawPoint(x+j+k*8,y+i,bg_color);
+                    } 
              }
           }
         }

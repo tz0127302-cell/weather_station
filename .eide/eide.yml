@@ -62,6 +62,7 @@ virtualFolder:
         - path: USER/src/spi.c
         - path: USER/src/rtc.c
         - path: USER/src/app.c
+        - path: USER/src/pic.c
       folders: []
     - name: FreeRTOS_port
       files:

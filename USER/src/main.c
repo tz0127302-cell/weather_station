@@ -33,6 +33,7 @@ int main()
     W25Qxx_Config();       /* 初始化 W25Q64: SPI Flash 存储 */
     SU_03T_Config();       /* 初始化 SU03T: 语音识别模块, UART4 */
     MY1680_Config();       /* 初始化 MY1680: 语音合成模块, UART5 */
+    Lcd_DisplayPic(0,0,gImage_desktop); /* 显示桌面背景图 */
     Wifi_NtpInit();        /* 初始化 WiFi + NTP: ESP-12F, 连接AP并同步时间 */
     Rtc_Init();            /* 初始化 RTC: 内部实时时钟, 1Hz */
     Key_Init();            /* 初始化按键: PA0, 上拉输入 */

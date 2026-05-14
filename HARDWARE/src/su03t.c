@@ -174,7 +174,7 @@ void SU_03T_Control(void)
         {
             case 0x00:  /* 唤醒 */
                 printf("[SU03T] CMD: wakeup\r\n");
-                MY1680_Play(0x02, 0x06);
+                MY1680_Play(0x02, 0x02);
                 break;
 
             case 0x01:  /* 开灯 */
