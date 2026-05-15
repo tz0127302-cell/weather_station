@@ -113,6 +113,7 @@ void WeatherTask(void *ptr)
 
                 if (Wifi_GetWeather(city_codes[current_city_idx], buf, sizeof(buf)) == 0)
                 {
+                    printf("get weather\r\n");
                     Weather_Parse(buf, &weather_data);
                     printf("city: %s, weather: %s, temp: %d C, hum: %d%%\r\n",
                            weather_data.cityName, weather_data.tq,
